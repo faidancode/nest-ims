@@ -29,7 +29,7 @@ lint:
 # Cara pakai: make migration-create name=CreateUserTable
 .PHONY: migration-create
 migration-create:
-	npm run typeorm:create-migration --name=$(name)
+	npm run typeorm:create-migration -- ./migrations/$(name)
 
 .PHONY: migration-run
 migration-run:

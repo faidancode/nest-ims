@@ -7,22 +7,16 @@ import {
     DeleteDateColumn,
 } from 'typeorm';
 
-@Entity('users')
-export class User {
+@Entity('roles')
+export class Role {
     @PrimaryColumn({ type: 'char', length: 36 })
     id: string;
 
-    @Column({ type: 'varchar', length: 150 })
+    @Column({ type: 'varchar', length: 100, unique: true })
     name: string;
 
-    @Column({ type: 'varchar', length: 150, unique: true })
-    email: string;
-
-    @Column({ type: 'varchar', length: 255 })
-    password: string;
-
-    @Column({ name: 'role_id', type: 'char', length: 36 })
-    roleId: string;
+    @Column({ type: 'text', nullable: true })
+    description: string;
 
     @Column({ type: 'boolean', default: true, name: 'is_active' })
     isActive: boolean;

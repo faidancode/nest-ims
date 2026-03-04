@@ -60,7 +60,7 @@ export class AuthService {
 
     return {
       userId: user.id,
-      role: user.role,
+      role: user.roleId,
       user: {
         name: user.name,
         email: user.email,
@@ -74,7 +74,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.roleId,
     };
     return this.jwtService.signAsync(payload as any, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
@@ -117,7 +117,7 @@ export class AuthService {
 
       return {
         userId: user.id,
-        role: user.role,
+        role: user.roleId,
         user: {
           name: user.name,
           email: user.email,
@@ -139,7 +139,7 @@ export class AuthService {
 
     return {
       userId: user.id,
-      role: user.role,
+      role: user.roleId,
       user: {
         name: user.name,
         email: user.email,

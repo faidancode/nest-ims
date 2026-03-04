@@ -5,27 +5,22 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     DeleteDateColumn,
+    ManyToOne,
+    JoinColumn,
 } from 'typeorm';
+import { User } from './user.entity';
+import { Role } from './role.entity';
 
-@Entity('users')
-export class User {
+@Entity('user_roles')
+export class UserRole {
     @PrimaryColumn({ type: 'char', length: 36 })
     id: string;
 
-    @Column({ type: 'varchar', length: 150 })
-    name: string;
-
-    @Column({ type: 'varchar', length: 150, unique: true })
-    email: string;
-
-    @Column({ type: 'varchar', length: 255 })
-    password: string;
+    @Column({ name: 'user_id', type: 'char', length: 36 })
+    userId: string;
 
     @Column({ name: 'role_id', type: 'char', length: 36 })
     roleId: string;
-
-    @Column({ type: 'boolean', default: true, name: 'is_active' })
-    isActive: boolean;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
@@ -35,4 +30,12 @@ export class User {
 
     @DeleteDateColumn({ name: 'deleted_at', nullable: true })
     deletedAt: Date;
+
+    @ManyToOne(() => User)
+    @JoinColumn({ name: 'user_id' })
+    user: User;
+
+    @ManyToOne(() => Role)
+    @JoinColumn({ name: 'role_id' })
+    role: Role;
 }

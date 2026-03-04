@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 import { RateLimitService } from './rate-limit.service';
-import { AppConfig } from '../../config/app.config';
 import { SKIP_RATE_LIMIT } from '../constants/rate-limit-constants';
 import { Reflector } from '@nestjs/core';
+import { AppConfig } from 'src/config/app.config';
 import { getClientIp } from '../utils/client-ip.util';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class GlobalRateLimitGuard implements CanActivate {
     private readonly rateLimitService: RateLimitService,
     private readonly appConfig: AppConfig,
     private reflector: Reflector,
-  ) {}
+  ) { }
 
   canActivate(context: ExecutionContext): boolean {
     const skip = this.reflector.get<boolean>(

@@ -114,3 +114,16 @@ test-module-watch:
 .PHONY: test-module-cov
 test-module-cov:
 	npm run test -- $(name) --coverage	
+
+# =========================
+# SEEDER
+# =========================
+# Cara pakai: make seed-user
+.PHONY: seed-user
+seed-user:
+	npx ts-node -r tsconfig-paths/register src/database/seed-users.ts
+
+# Cara pakai: make seed file=seed-products.ts
+.PHONY: seed
+seed:
+	npx ts-node -r tsconfig-paths/register src/database/$(file)	

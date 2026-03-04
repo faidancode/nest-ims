@@ -72,3 +72,45 @@ docker-logs:
 .PHONY: clean
 clean:
 	rm -rf dist node_modules
+
+	# =========================
+# TESTING
+# =========================
+.PHONY: test
+test:
+	npm run test
+
+.PHONY: test-watch
+test-watch:
+	npm run test:watch
+
+.PHONY: test-e2e
+test-e2e:
+	npm run test:e2e
+
+.PHONY: test-cov
+test-cov:
+	npm run test:cov
+
+.PHONY: test-debug
+test-debug:
+	node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand
+
+# =========================
+# TESTING (Advanced)
+# =========================
+
+# Cara pakai: make test-module name=auth
+.PHONY: test-module
+test-module:
+	npm run test -- $(name)
+
+# Cara pakai: make test-module-watch name=auth
+.PHONY: test-module-watch
+test-module-watch:
+	npm run test:watch -- $(name)
+
+# Cara pakai: make test-module-cov name=auth
+.PHONY: test-module-cov
+test-module-cov:
+	npm run test -- $(name) --coverage	

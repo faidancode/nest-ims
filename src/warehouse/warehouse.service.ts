@@ -63,7 +63,7 @@ export class WarehouseService {
     const order = this.resolveOrder(sort);
     const skip = (page - 1) * limit;
 
-    const [items, total] = await this.warehouseRepository.findAndCount({
+    const [data, total] = await this.warehouseRepository.findAndCount({
       where,
       order,
       skip,
@@ -71,7 +71,7 @@ export class WarehouseService {
     });
 
     return {
-      items,
+      data,
       meta: {
         page,
         limit,

@@ -67,7 +67,7 @@ describe('WarehouseControllerTest', () => {
         search: undefined,
         sort: 'createdAt:desc',
       });
-      expect(result).toEqual(ok(payload));
+      expect(result).toEqual(payload);
     });
 
     it('should pass search param to service', async () => {
@@ -203,7 +203,9 @@ describe('WarehouseControllerTest', () => {
 
     describe('Negative Scenarios', () => {
       it('should throw when service remove fails', async () => {
-        service.remove.mockRejectedValue(new NotFoundException('Warehouse not found'));
+        service.remove.mockRejectedValue(
+          new NotFoundException('Warehouse not found'),
+        );
 
         await expect(controller.remove('missing')).rejects.toThrow(
           NotFoundException,

@@ -11,7 +11,7 @@ import { map } from 'rxjs/operators';
 import { ok, type PaginationMeta, type ResponseEnvelope } from './response';
 
 type PaginatedResponse<T = unknown> = {
-  items: T;
+  data: T;
   meta?: PaginationMeta | null;
 };
 
@@ -28,7 +28,7 @@ function isPaginatedResponse(value: unknown): value is PaginatedResponse {
     return false;
   }
   const record = value as Record<string, unknown>;
-  return 'items' in record && 'meta' in record;
+  return 'data' in record && 'meta' in record;
 }
 
 @Injectable()
@@ -50,7 +50,7 @@ export class ResponseEnvelopeInterceptor
         if (isPaginatedResponse(data)) {
           return {
             ok: true,
-            data: data.items,
+            data: data.data,
             meta: data.meta ?? null,
             error: null,
           } satisfies ResponseEnvelope;

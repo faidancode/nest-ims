@@ -32,7 +32,7 @@ import { ok, okNoContent } from '../common/http/response';
 @Controller('v1/warehouses')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WarehouseController {
-  constructor(private readonly warehouseService: WarehouseService) { }
+  constructor(private readonly warehouseService: WarehouseService) {}
 
   @SkipRateLimit()
   @Get()
@@ -42,7 +42,7 @@ export class WarehouseController {
     query: ListWarehousesQuery,
   ) {
     const result = await this.warehouseService.findAll(query);
-    return ok(result);
+    return result;
   }
 
   @Get(':id')

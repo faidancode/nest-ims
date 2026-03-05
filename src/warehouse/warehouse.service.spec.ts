@@ -60,7 +60,7 @@ describe('WarehouseServiceTest', () => {
         }),
       );
       expect(result).toEqual({
-        items: rows,
+        data: rows,
         meta: {
           page: 1,
           limit: 10,

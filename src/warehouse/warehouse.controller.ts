@@ -15,45 +15,63 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RequirePermissions } from '../common/rbac/permissions.decorator';
 import { PermissionsGuard } from '../common/rbac/permissions.guard';
 import { SkipRateLimit } from '../common/rate-limit/rate-limit-decorator';
+import type {
+  CreateWarehouseInput,
+  ListWarehousesQuery,
+  UpdateWarehouseInput,
+} from './warehouse.schema';
 import {
   CreateWarehouseSchema,
   ListWarehousesQuerySchema,
   UpdateWarehouseSchema,
 } from './warehouse.schema';
 import { WarehouseService } from './warehouse.service';
+import { ZodValidationPipe } from '../common/http/zod.validation.pipe';
+import { ok, okNoContent } from '../common/http/response';
 
 @Controller('v1/warehouses')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WarehouseController {
-  constructor(private readonly warehouseService: WarehouseService) {}
+  constructor(private readonly warehouseService: WarehouseService) { }
 
   @SkipRateLimit()
   @Get()
   @RequirePermissions({ action: 'READ', resource: 'WAREHOUSE' })
-  async findAll(@Query() query: unknown) {
-    const parsed = ListWarehousesQuerySchema.parse(query);
-    return this.warehouseService.findAll(parsed);
+  async findAll(
+    @Query(new ZodValidationPipe(ListWarehousesQuerySchema))
+    query: ListWarehousesQuery,
+  ) {
+    const result = await this.warehouseService.findAll(query);
+    return ok(result);
   }
 
   @Get(':id')
   @RequirePermissions({ action: 'READ', resource: 'WAREHOUSE' })
   async findOne(@Param('id') id: string) {
-    return this.warehouseService.findOne(id);
+    const result = await this.warehouseService.findOne(id);
+    return ok(result);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermissions({ action: 'CREATE', resource: 'WAREHOUSE' })
-  async create(@Body() body: unknown) {
-    const parsed = CreateWarehouseSchema.parse(body);
-    return this.warehouseService.create(parsed);
+  async create(
+    @Body(new ZodValidationPipe(CreateWarehouseSchema))
+    body: CreateWarehouseInput,
+  ) {
+    const result = await this.warehouseService.create(body);
+    return ok(result);
   }
 
   @Patch(':id')
   @RequirePermissions({ action: 'UPDATE', resource: 'WAREHOUSE' })
-  async update(@Param('id') id: string, @Body() body: unknown) {
-    const parsed = UpdateWarehouseSchema.parse(body);
-    return this.warehouseService.update(id, parsed);
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdateWarehouseSchema))
+    body: UpdateWarehouseInput,
+  ) {
+    const result = await this.warehouseService.update(id, body);
+    return ok(result);
   }
 
   @Delete(':id')
@@ -61,12 +79,6 @@ export class WarehouseController {
   @RequirePermissions({ action: 'DELETE', resource: 'WAREHOUSE' })
   async remove(@Param('id') id: string) {
     await this.warehouseService.remove(id);
-
-    return {
-      ok: true,
-      data: null,
-      meta: null,
-      error: null,
-    };
+    return okNoContent();
   }
 }

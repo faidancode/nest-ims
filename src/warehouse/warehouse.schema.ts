@@ -22,9 +22,24 @@ export const ListWarehousesQuerySchema = z.object({
 export type ListWarehousesQuery = z.infer<typeof ListWarehousesQuerySchema>;
 
 export const CreateWarehouseSchema = z.object({
-  name: z.string().min(1).max(255),
-  location: z.string().max(500).optional(),
-  active: z.boolean().optional().default(true),
+  name: z
+    .string({
+      message: 'Nama warehouse harus diisi',
+    })
+    .min(1, 'Nama warehouse tidak boleh kosong')
+    .max(255, 'Nama warehouse maksimal 255 karakter'),
+  location: z
+    .string({
+      message: 'Lokasi harus berupa string',
+    })
+    .max(500, 'Lokasi maksimal 500 karakter')
+    .optional(),
+  active: z
+    .boolean({
+      message: 'Status aktif harus berupa boolean',
+    })
+    .optional()
+    .default(true),
 });
 
 export type CreateWarehouseInput = z.infer<typeof CreateWarehouseSchema>;

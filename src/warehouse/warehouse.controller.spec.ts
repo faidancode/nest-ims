@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ZodError } from 'zod';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { REQUIRED_PERMISSIONS_KEY } from '../common/constants/rbac-constants';
 import { PermissionsGuard } from '../common/rbac/permissions.guard';
 import { WarehouseController } from './warehouse.controller';
 import { WarehouseService } from './warehouse.service';
+import { CreateWarehouseSchema } from './warehouse.schema';
+import { ok, okNoContent } from '../common/http/response';
 
 describe('WarehouseControllerTest', () => {
   let controller: WarehouseController;
@@ -54,10 +55,10 @@ describe('WarehouseControllerTest', () => {
       service.findAll.mockResolvedValue(payload as any);
 
       const result = await controller.findAll({
-        page: '2',
-        limit: '5',
+        page: 2,
+        limit: 5,
         sort: 'createdAt:desc',
-      });
+      } as any);
 
       expect(service.findAll).toHaveBeenCalledWith({
         page: 2,
@@ -66,18 +67,18 @@ describe('WarehouseControllerTest', () => {
         search: undefined,
         sort: 'createdAt:desc',
       });
-      expect(result).toBe(payload);
+      expect(result).toEqual(ok(payload));
     });
 
     it('should pass search param to service', async () => {
       service.findAll.mockResolvedValue({ items: [], meta: {} } as any);
 
       await controller.findAll({
-        page: '1',
-        limit: '10',
+        page: 1,
+        limit: 10,
         sort: 'name:asc',
         search: 'jakarta',
-      });
+      } as any);
 
       expect(service.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ search: 'jakarta' }),
@@ -90,22 +91,11 @@ describe('WarehouseControllerTest', () => {
 
         await expect(
           controller.findAll({
-            page: '1',
-            limit: '10',
+            page: 1,
+            limit: 10,
             sort: 'createdAt:desc',
           }),
         ).rejects.toThrow('Service unavailable');
-      });
-
-      it('should reject invalid pagination query', async () => {
-        await expect(
-          controller.findAll({
-            page: '0',
-            limit: '10',
-            sort: 'createdAt:desc',
-          }),
-        ).rejects.toThrow(ZodError);
-        expect(service.findAll).not.toHaveBeenCalled();
       });
     });
   });
@@ -117,7 +107,7 @@ describe('WarehouseControllerTest', () => {
       const result = await controller.findOne('wh-1');
 
       expect(service.findOne).toHaveBeenCalledWith('wh-1');
-      expect(result).toEqual({ id: 'wh-1' });
+      expect(result).toEqual(ok({ id: 'wh-1' }));
     });
 
     describe('Negative Scenarios', () => {
@@ -149,19 +139,22 @@ describe('WarehouseControllerTest', () => {
         location: 'Jakarta',
         active: true,
       });
-      expect(result).toEqual(payload);
+      expect(result).toEqual(ok(payload));
     });
 
     describe('Negative Scenarios', () => {
-      it('should reject invalid create payload', async () => {
-        await expect(
-          controller.create({
-            name: '',
-            location: 'Jakarta',
-            active: true,
-          }),
-        ).rejects.toThrow(ZodError);
-        expect(service.create).not.toHaveBeenCalled();
+      it('should reject invalid create payload via schema', () => {
+        const result = CreateWarehouseSchema.safeParse({
+          name: '',
+          location: 'Jakarta',
+          active: true,
+        });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues[0].message).toBe(
+            'Nama warehouse tidak boleh kosong',
+          );
+        }
       });
     });
   });
@@ -180,17 +173,15 @@ describe('WarehouseControllerTest', () => {
         name: 'Updated Warehouse',
         active: false,
       });
-      expect(result).toEqual(payload);
+      expect(result).toEqual(ok(payload));
     });
 
     describe('Negative Scenarios', () => {
-      it('should reject invalid update payload', async () => {
-        await expect(
-          controller.update('wh-1', {
-            name: '',
-          }),
-        ).rejects.toThrow(ZodError);
-        expect(service.update).not.toHaveBeenCalled();
+      it('should reject invalid update payload via schema', () => {
+        const result = CreateWarehouseSchema.partial().safeParse({
+          name: '',
+        });
+        expect(result.success).toBe(false);
       });
     });
   });

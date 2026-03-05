@@ -29,7 +29,7 @@ describe('AuthService', () => {
     name: 'John Doe',
     email: 'john@example.com',
     password: 'hashed-password',
-    role: 'ADMIN',
+    roleId: 'role-1',
     isActive: true,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -144,7 +144,7 @@ describe('AuthService', () => {
         {
           sub: 'user-1',
           email: 'john@example.com',
-          role: 'ADMIN',
+          role: 'role-1',
         },
         {
           secret: 'access-secret',
@@ -207,7 +207,7 @@ describe('AuthService', () => {
       );
       expect(result).toEqual({
         userId: 'user-1',
-        role: 'ADMIN',
+        role: 'role-1',
         user: {
           name: 'John Doe',
           email: 'john@example.com',
@@ -253,7 +253,7 @@ describe('AuthService', () => {
       );
       expect(result).toEqual({
         userId: 'user-1',
-        role: 'ADMIN',
+        role: 'role-1',
         user: {
           name: 'John Doe',
           email: 'john@example.com',
@@ -292,7 +292,7 @@ describe('AuthService', () => {
       });
       expect(result).toEqual({
         userId: 'user-1',
-        role: 'ADMIN',
+        role: 'role-1',
         user: {
           name: 'John Doe',
           email: 'john@example.com',

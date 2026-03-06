@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PermissionsGuard } from '../common/rbac/permissions.guard';
-import { WarehouseController } from './warehouse.controller';
-import { Warehouse } from './entities/warehouse.entity';
-import { WarehouseService } from './warehouse.service';
+import { WarehouseController } from './warehouses.controller';
+import { Warehouse } from './warehouse.entity';
+import { WarehouseService } from './warehouses.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Warehouse])],

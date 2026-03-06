@@ -19,13 +19,13 @@ import type {
   CreateWarehouseInput,
   ListWarehousesQuery,
   UpdateWarehouseInput,
-} from './warehouse.schema';
+} from './warehouses.schema';
 import {
   CreateWarehouseSchema,
   ListWarehousesQuerySchema,
   UpdateWarehouseSchema,
-} from './warehouse.schema';
-import { WarehouseService } from './warehouse.service';
+} from './warehouses.schema';
+import { WarehouseService } from './warehouses.service';
 import { ZodValidationPipe } from '../common/http/zod.validation.pipe';
 import { ok, okNoContent } from '../common/http/response';
 

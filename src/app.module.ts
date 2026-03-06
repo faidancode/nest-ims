@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
-import { WarehouseModule } from './warehouse/warehouse.module';
+import { WarehouseModule } from './warehouses/warehouses.module';
 import { RateLimitService } from './common/rate-limit/rate-limit.service';
 import { RequestIdInterceptor } from './common/http/request-id.interceptor';
 import { LoggingInterceptor } from './common/http/logging.interceptor';
 import { APP_GUARD } from '@nestjs/core';
 import { GlobalRateLimitGuard } from './common/rate-limit/global-rate-limit.guard';
 import { AppConfigModule } from './config/app-config.module';
+import { PartsModule } from './parts/parts.module';
 
 @Module({
   //agar tidak perlu import config module
@@ -18,6 +19,7 @@ import { AppConfigModule } from './config/app-config.module';
     DatabaseModule,
     AuthModule,
     WarehouseModule,
+    PartsModule,
   ],
   controllers: [],
   providers: [

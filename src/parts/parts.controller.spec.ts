@@ -1,19 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { REQUIRED_PERMISSIONS_KEY } from '../common/constants/rbac-constants';
-import { PermissionsGuard } from '../common/rbac/permissions.guard';
-import { WarehouseController } from './warehouse.controller';
-import { WarehouseService } from './warehouse.service';
-import { CreateWarehouseSchema } from './warehouse.schema';
 import { ok, okNoContent } from '../common/http/response';
+import { PermissionsGuard } from '../common/rbac/permissions.guard';
+import { CreatePartSchema } from './parts.schema';
+import { PartsController } from './parts.controller';
+import { PartsService } from './parts.service';
 
-describe('WarehouseControllerTest', () => {
-  let controller: WarehouseController;
-  let service: jest.Mocked<WarehouseService>;
+describe('PartsControllerTest', () => {
+  let controller: PartsController;
+  let service: jest.Mocked<PartsService>;
 
   beforeEach(async () => {
-    const serviceMock: Partial<Record<keyof WarehouseService, any>> = {
+    const serviceMock: Partial<Record<keyof PartsService, any>> = {
       findAll: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
@@ -22,10 +22,10 @@ describe('WarehouseControllerTest', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [WarehouseController],
+      controllers: [PartsController],
       providers: [
         {
-          provide: WarehouseService,
+          provide: PartsService,
           useValue: serviceMock,
         },
       ],
@@ -36,8 +36,8 @@ describe('WarehouseControllerTest', () => {
       .useValue({ canActivate: () => true })
       .compile();
 
-    controller = module.get<WarehouseController>(WarehouseController);
-    service = module.get(WarehouseService) as jest.Mocked<WarehouseService>;
+    controller = module.get<PartsController>(PartsController);
+    service = module.get(PartsService) as jest.Mocked<PartsService>;
   });
 
   describe('Initialization', () => {
@@ -46,10 +46,10 @@ describe('WarehouseControllerTest', () => {
     });
   });
 
-  describe('WarehouseControllerTest_FindAll', () => {
-    it('should return paginated warehouses', async () => {
+  describe('PartsControllerTest_FindAll', () => {
+    it('should return paginated parts', async () => {
       const payload = {
-        items: [],
+        data: [],
         meta: { page: 2, limit: 5, total: 0, totalPages: 0 },
       };
       service.findAll.mockResolvedValue(payload as any);
@@ -71,17 +71,17 @@ describe('WarehouseControllerTest', () => {
     });
 
     it('should pass search param to service', async () => {
-      service.findAll.mockResolvedValue({ items: [], meta: {} } as any);
+      service.findAll.mockResolvedValue({ data: [], meta: {} } as any);
 
       await controller.findAll({
         page: 1,
         limit: 10,
         sort: 'name:asc',
-        search: 'jakarta',
+        search: 'steel',
       } as any);
 
       expect(service.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({ search: 'jakarta' }),
+        expect.objectContaining({ search: 'steel' }),
       );
     });
 
@@ -94,27 +94,25 @@ describe('WarehouseControllerTest', () => {
             page: 1,
             limit: 10,
             sort: 'createdAt:desc',
-          }),
+          } as any),
         ).rejects.toThrow('Service unavailable');
       });
     });
   });
 
-  describe('WarehouseControllerTest_FindOne', () => {
-    it('should return warehouse by id', async () => {
-      service.findOne.mockResolvedValue({ id: 'wh-1' } as any);
+  describe('PartsControllerTest_FindOne', () => {
+    it('should return part by id', async () => {
+      service.findOne.mockResolvedValue({ id: 'part-1' } as any);
 
-      const result = await controller.findOne('wh-1');
+      const result = await controller.findOne('part-1');
 
-      expect(service.findOne).toHaveBeenCalledWith('wh-1');
-      expect(result).toEqual(ok({ id: 'wh-1' }));
+      expect(service.findOne).toHaveBeenCalledWith('part-1');
+      expect(result).toEqual(ok({ id: 'part-1' }));
     });
 
     describe('Negative Scenarios', () => {
-      it('should throw when warehouse is not found', async () => {
-        service.findOne.mockRejectedValue(
-          new NotFoundException('Warehouse not found'),
-        );
+      it('should throw when part is not found', async () => {
+        service.findOne.mockRejectedValue(new NotFoundException('Part not found'));
 
         await expect(controller.findOne('missing')).rejects.toThrow(
           NotFoundException,
@@ -123,89 +121,82 @@ describe('WarehouseControllerTest', () => {
     });
   });
 
-  describe('WarehouseControllerTest_Create', () => {
-    it('should create warehouse', async () => {
-      const payload = { id: 'wh-1' };
+  describe('PartsControllerTest_Create', () => {
+    it('should create part', async () => {
+      const payload = { id: 'part-1' };
       service.create.mockResolvedValue(payload as any);
 
       const result = await controller.create({
-        name: 'Main Warehouse',
-        location: 'Jakarta',
-        active: true,
+        partNumber: 'RAW-001',
+        name: 'Steel Rod',
+        description: 'Raw steel rod',
+        type: 'RAW',
+        unit: 'PCS',
       });
 
       expect(service.create).toHaveBeenCalledWith({
-        name: 'Main Warehouse',
-        location: 'Jakarta',
-        active: true,
+        partNumber: 'RAW-001',
+        name: 'Steel Rod',
+        description: 'Raw steel rod',
+        type: 'RAW',
+        unit: 'PCS',
       });
       expect(result).toEqual(ok(payload));
     });
 
     describe('Negative Scenarios', () => {
       it('should reject invalid create payload via schema', () => {
-        const result = CreateWarehouseSchema.safeParse({
-          name: '',
-          location: 'Jakarta',
-          active: true,
+        const result = CreatePartSchema.safeParse({
+          partNumber: '',
+          name: 'Steel Rod',
+          type: 'RAW',
+          unit: 'PCS',
         });
         expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toBe(
-            'Nama warehouse tidak boleh kosong',
-          );
-        }
       });
     });
   });
 
-  describe('WarehouseControllerTest_Update', () => {
-    it('should update warehouse', async () => {
-      const payload = { id: 'wh-1', name: 'Updated Warehouse' };
+  describe('PartsControllerTest_Update', () => {
+    it('should update part', async () => {
+      const payload = { id: 'part-1', name: 'Steel Pipe' };
       service.update.mockResolvedValue(payload as any);
 
-      const result = await controller.update('wh-1', {
-        name: 'Updated Warehouse',
-        active: false,
+      const result = await controller.update('part-1', {
+        name: 'Steel Pipe',
+        unit: 'M',
       });
 
-      expect(service.update).toHaveBeenCalledWith('wh-1', {
-        name: 'Updated Warehouse',
-        active: false,
+      expect(service.update).toHaveBeenCalledWith('part-1', {
+        name: 'Steel Pipe',
+        unit: 'M',
       });
       expect(result).toEqual(ok(payload));
     });
 
     describe('Negative Scenarios', () => {
       it('should reject invalid update payload via schema', () => {
-        const result = CreateWarehouseSchema.partial().safeParse({
-          name: '',
+        const result = CreatePartSchema.partial().safeParse({
+          unit: '',
         });
         expect(result.success).toBe(false);
       });
     });
   });
 
-  describe('WarehouseControllerTest_Delete', () => {
-    it('should remove warehouse', async () => {
+  describe('PartsControllerTest_Delete', () => {
+    it('should remove part', async () => {
       service.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove('wh-1');
+      const result = await controller.remove('part-1');
 
-      expect(service.remove).toHaveBeenCalledWith('wh-1');
-      expect(result).toEqual({
-        ok: true,
-        data: null,
-        meta: null,
-        error: null,
-      });
+      expect(service.remove).toHaveBeenCalledWith('part-1');
+      expect(result).toEqual(okNoContent());
     });
 
     describe('Negative Scenarios', () => {
       it('should throw when service remove fails', async () => {
-        service.remove.mockRejectedValue(
-          new NotFoundException('Warehouse not found'),
-        );
+        service.remove.mockRejectedValue(new NotFoundException('Part not found'));
 
         await expect(controller.remove('missing')).rejects.toThrow(
           NotFoundException,
@@ -214,47 +205,43 @@ describe('WarehouseControllerTest', () => {
     });
   });
 
-  describe('WarehouseControllerTest_RBACMetadata', () => {
+  describe('PartsControllerTest_RBACMetadata', () => {
     it('should require READ permission for findAll and findOne', () => {
       const findAllPermissions = Reflect.getMetadata(
         REQUIRED_PERMISSIONS_KEY,
-        WarehouseController.prototype.findAll,
+        PartsController.prototype.findAll,
       );
       const findOnePermissions = Reflect.getMetadata(
         REQUIRED_PERMISSIONS_KEY,
-        WarehouseController.prototype.findOne,
+        PartsController.prototype.findOne,
       );
 
-      expect(findAllPermissions).toEqual([
-        { action: 'READ', resource: 'WAREHOUSE' },
-      ]);
-      expect(findOnePermissions).toEqual([
-        { action: 'READ', resource: 'WAREHOUSE' },
-      ]);
+      expect(findAllPermissions).toEqual([{ action: 'READ', resource: 'PART' }]);
+      expect(findOnePermissions).toEqual([{ action: 'READ', resource: 'PART' }]);
     });
 
     it('should require CREATE, UPDATE, DELETE permissions for write endpoints', () => {
       const createPermissions = Reflect.getMetadata(
         REQUIRED_PERMISSIONS_KEY,
-        WarehouseController.prototype.create,
+        PartsController.prototype.create,
       );
       const updatePermissions = Reflect.getMetadata(
         REQUIRED_PERMISSIONS_KEY,
-        WarehouseController.prototype.update,
+        PartsController.prototype.update,
       );
       const removePermissions = Reflect.getMetadata(
         REQUIRED_PERMISSIONS_KEY,
-        WarehouseController.prototype.remove,
+        PartsController.prototype.remove,
       );
 
       expect(createPermissions).toEqual([
-        { action: 'CREATE', resource: 'WAREHOUSE' },
+        { action: 'CREATE', resource: 'PART' },
       ]);
       expect(updatePermissions).toEqual([
-        { action: 'UPDATE', resource: 'WAREHOUSE' },
+        { action: 'UPDATE', resource: 'PART' },
       ]);
       expect(removePermissions).toEqual([
-        { action: 'DELETE', resource: 'WAREHOUSE' },
+        { action: 'DELETE', resource: 'PART' },
       ]);
     });
   });

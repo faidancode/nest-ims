@@ -10,8 +10,8 @@ import {
   CreateWarehouseInput,
   ListWarehousesQuery,
   UpdateWarehouseInput,
-} from './warehouse.schema';
-import { Warehouse } from './entities/warehouse.entity';
+} from './warehouses.schema';
+import { Warehouse } from './warehouse.entity';
 
 @Injectable()
 export class WarehouseService {

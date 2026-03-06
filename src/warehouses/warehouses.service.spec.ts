@@ -2,8 +2,8 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IsNull, Like, Repository } from 'typeorm';
-import { Warehouse } from './entities/warehouse.entity';
-import { WarehouseService } from './warehouse.service';
+import { Warehouse } from './warehouse.entity';
+import { WarehouseService } from './warehouses.service';
 
 describe('WarehouseServiceTest', () => {
   let service: WarehouseService;

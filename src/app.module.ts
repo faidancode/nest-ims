@@ -10,6 +10,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { GlobalRateLimitGuard } from './common/rate-limit/global-rate-limit.guard';
 import { AppConfigModule } from './config/app-config.module';
 import { PartsModule } from './parts/parts.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
+import { CustomersModule } from './customers/customers.module';
 
 @Module({
   //agar tidak perlu import config module
@@ -20,6 +22,8 @@ import { PartsModule } from './parts/parts.module';
     AuthModule,
     WarehouseModule,
     PartsModule,
+    SuppliersModule,
+    CustomersModule,
   ],
   controllers: [],
   providers: [

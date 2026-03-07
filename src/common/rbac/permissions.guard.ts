@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -15,6 +16,8 @@ import {
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
+  private readonly logger = new Logger(PermissionsGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly dataSource: DataSource,
@@ -62,11 +65,38 @@ export class PermissionsGuard implements CanActivate {
       ),
     );
 
+    const isDebugEnabled = process.env.RBAC_DEBUG === 'true';
+    if (isDebugEnabled) {
+      console.log("DEBUG")
+      this.logger.debug(
+        JSON.stringify({
+          userId,
+          requiredPermissions,
+          permissionCount: permissionSet.size,
+          permissions: [...permissionSet].sort(),
+        }),
+      );
+    }
+
     const hasAllPermissions = requiredPermissions.every((permission) =>
       permissionSet.has(`${permission.action}:${permission.resource}`),
     );
 
     if (!hasAllPermissions) {
+      if (isDebugEnabled) {
+        const missingPermissions = requiredPermissions.filter(
+          (permission) =>
+            !permissionSet.has(`${permission.action}:${permission.resource}`),
+        );
+        this.logger.warn(
+          JSON.stringify({
+            userId,
+            requiredPermissions,
+            missingPermissions,
+          }),
+        );
+      }
+
       throw new ForbiddenException(
         'You do not have permission to access this resource',
       );

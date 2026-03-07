@@ -14,6 +14,8 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { CustomersModule } from './customers/customers.module';
 import { InventoriesModule } from './inventories/inventories.module';
 import { InventoryTransactionsModule } from './inventory-transactions/inventory-transactions.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { SalesOrdersModule } from './sales-orders/sales-orders.module';
 
 @Module({
   //agar tidak perlu import config module
@@ -28,6 +30,8 @@ import { InventoryTransactionsModule } from './inventory-transactions/inventory-
     CustomersModule,
     InventoriesModule,
     InventoryTransactionsModule,
+    PurchaseOrdersModule,
+    SalesOrdersModule,
   ],
   controllers: [],
   providers: [

@@ -2,16 +2,22 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { SalesOrder } from './sales-order.entity';
 import { SalesOrdersService } from './sales-orders.service';
 
 describe('SalesOrdersServiceTest', () => {
   let service: SalesOrdersService;
+  let auditLogsService: jest.Mocked<Pick<AuditLogsService, 'create'>>;
   let salesOrderRepository: jest.Mocked<
     Pick<Repository<SalesOrder>, 'findAndCount' | 'findOne' | 'save' | 'create'>
   >;
 
   beforeEach(async () => {
+    auditLogsService = {
+      create: jest.fn(),
+    };
+
     salesOrderRepository = {
       findAndCount: jest.fn(),
       findOne: jest.fn(),
@@ -25,6 +31,10 @@ describe('SalesOrdersServiceTest', () => {
         {
           provide: getRepositoryToken(SalesOrder),
           useValue: salesOrderRepository,
+        },
+        {
+          provide: AuditLogsService,
+          useValue: auditLogsService,
         },
       ],
     }).compile();

@@ -1806,12 +1806,139 @@
                     "response": []
                 }
             ]
+        },
+        {
+            "name": "Audit Logs",
+            "item": [
+                {
+                    "name": "List Audit Logs",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "let jsonData = {};",
+                                    "try { jsonData = pm.response.json(); } catch (e) {}",
+                                    "const data = jsonData.data || [];",
+                                    "if (data.length > 0 && data[0].id) pm.collectionVariables.set('audit_log_id', data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/audit-logs?page=1&limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "audit-logs"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "q",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "action",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "tableName",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "recordId",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "userId",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dateFrom",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dateTo",
+                                    "value": "",
+                                    "disabled": true
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Audit Log by ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "let jsonData = {};",
+                                    "try { jsonData = pm.response.json(); } catch (e) {}",
+                                    "const data = jsonData.data || {};",
+                                    "if (data.id) pm.collectionVariables.set('audit_log_id', data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/audit-logs/{{audit_log_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "audit-logs",
+                                "{{audit_log_id}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
         }
     ],
     "variable": [
         {
             "key": "base_url",
-            "value": "http://localhost:3000",
+            "value": "http://localhost:3000/api",
             "type": "string"
         },
         {
@@ -1868,6 +1995,11 @@
             "key": "sales_order_id",
             "type": "string",
             "value": ""
+        },
+        {
+            "key": "audit_log_id",
+            "value": "",
+            "type": "string"
         }
     ]
 }

@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { SalesOrder, SalesOrderStatus } from './sales-order.entity';
 import {
   CreateSalesOrderInput,
@@ -18,7 +19,42 @@ export class SalesOrdersService {
   constructor(
     @InjectRepository(SalesOrder)
     private readonly salesOrderRepository: Repository<SalesOrder>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
+
+  private toAuditValues(order: SalesOrder) {
+    return {
+      id: order.id,
+      soNumber: order.soNumber,
+      customerId: order.customerId,
+      status: order.status,
+      orderDate: order.orderDate,
+      expectedDate: order.expectedDate,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      deletedAt: order.deletedAt,
+    };
+  }
+
+  private async writeAuditLog(input: {
+    recordId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }) {
+    try {
+      await this.auditLogsService.create({
+        tableName: 'sales_orders',
+        recordId: input.recordId,
+        action: input.action,
+        oldValues: input.oldValues,
+        newValues: input.newValues,
+      });
+    } catch {
+      // Do not fail business transaction when audit logging fails.
+    }
+  }
 
   private resolveOrder(sort: string): Record<string, 'ASC' | 'DESC'> {
     const [sortField, sortDirRaw] = sort.split(':');
@@ -118,6 +154,7 @@ export class SalesOrdersService {
     }
 
     if (existing && existing.deletedAt) {
+      const oldValues = this.toAuditValues(existing);
       existing.customerId = input.customerId;
       existing.status = input.status ?? 'DRAFT';
       existing.orderDate = input.orderDate ? new Date(input.orderDate) : new Date();
@@ -125,6 +162,12 @@ export class SalesOrdersService {
       existing.notes = input.notes ?? null;
       existing.deletedAt = null;
       await this.salesOrderRepository.save(existing);
+      await this.writeAuditLog({
+        recordId: existing.id,
+        action: 'UPDATE',
+        oldValues,
+        newValues: this.toAuditValues(existing),
+      });
       return this.findOne(existing.id);
     }
 
@@ -139,11 +182,18 @@ export class SalesOrdersService {
     });
 
     await this.salesOrderRepository.save(entity);
+    await this.writeAuditLog({
+      recordId: entity.id,
+      action: 'INSERT',
+      oldValues: undefined,
+      newValues: this.toAuditValues(entity),
+    });
     return this.findOne(entity.id);
   }
 
   async update(id: string, input: UpdateSalesOrderInput): Promise<SalesOrder> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
 
     if (input.soNumber && input.soNumber !== existing.soNumber) {
       const duplicate = await this.salesOrderRepository.findOne({
@@ -165,12 +215,25 @@ export class SalesOrdersService {
     existing.notes = input.notes ?? existing.notes;
 
     await this.salesOrderRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'UPDATE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
     await this.salesOrderRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'DELETE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
   }
 }

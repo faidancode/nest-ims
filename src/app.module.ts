@@ -16,6 +16,7 @@ import { InventoriesModule } from './inventories/inventories.module';
 import { InventoryTransactionsModule } from './inventory-transactions/inventory-transactions.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { SalesOrdersModule } from './sales-orders/sales-orders.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 @Module({
   //agar tidak perlu import config module
@@ -32,6 +33,7 @@ import { SalesOrdersModule } from './sales-orders/sales-orders.module';
     InventoryTransactionsModule,
     PurchaseOrdersModule,
     SalesOrdersModule,
+    AuditLogsModule,
   ],
   controllers: [],
   providers: [

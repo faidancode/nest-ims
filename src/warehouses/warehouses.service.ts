@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import {
   CreateWarehouseInput,
   ListWarehousesQuery,
@@ -18,7 +19,39 @@ export class WarehouseService {
   constructor(
     @InjectRepository(Warehouse)
     private readonly warehouseRepository: Repository<Warehouse>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
+
+  private toAuditValues(warehouse: Warehouse) {
+    return {
+      id: warehouse.id,
+      name: warehouse.name,
+      location: warehouse.location,
+      isActive: warehouse.isActive,
+      createdAt: warehouse.createdAt,
+      updatedAt: warehouse.updatedAt,
+      deletedAt: warehouse.deletedAt,
+    };
+  }
+
+  private async writeAuditLog(input: {
+    recordId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }) {
+    try {
+      await this.auditLogsService.create({
+        tableName: 'warehouses',
+        recordId: input.recordId,
+        action: input.action,
+        oldValues: input.oldValues,
+        newValues: input.newValues,
+      });
+    } catch {
+      // Do not fail business transaction when audit logging fails.
+    }
+  }
 
   private resolveOrder(sort: string): Record<string, 'ASC' | 'DESC'> {
     const [sortField, sortDirRaw] = sort.split(':');
@@ -106,10 +139,17 @@ export class WarehouseService {
     }
 
     if (existing && existing.deletedAt) {
+      const oldValues = this.toAuditValues(existing);
       existing.location = input.location ?? null;
       existing.isActive = input.active ?? true;
       existing.deletedAt = null;
       await this.warehouseRepository.save(existing);
+      await this.writeAuditLog({
+        recordId: existing.id,
+        action: 'UPDATE',
+        oldValues,
+        newValues: this.toAuditValues(existing),
+      });
       return this.findOne(existing.id);
     }
 
@@ -121,11 +161,17 @@ export class WarehouseService {
     });
 
     await this.warehouseRepository.save(entity);
+    await this.writeAuditLog({
+      recordId: entity.id,
+      action: 'INSERT',
+      newValues: this.toAuditValues(entity),
+    });
     return this.findOne(entity.id);
   }
 
   async update(id: string, input: UpdateWarehouseInput): Promise<Warehouse> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
 
     if (input.name && input.name !== existing.name) {
       const duplicate = await this.warehouseRepository.findOne({
@@ -143,12 +189,25 @@ export class WarehouseService {
       typeof input.active === 'boolean' ? input.active : existing.isActive;
 
     await this.warehouseRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'UPDATE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
     await this.warehouseRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'DELETE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
   }
 }

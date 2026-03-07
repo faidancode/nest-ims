@@ -7,30 +7,31 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
-import { Inventory } from './inventory.entity';
+import { BillOfMaterial } from './bill-of-material.entity';
 import {
-  CreateInventoryInput,
-  ListInventoriesQuery,
-  UpdateInventoryInput,
-} from './inventories.schema';
+  CreateBillOfMaterialInput,
+  ListBillOfMaterialsQuery,
+  UpdateBillOfMaterialInput,
+} from './bill-of-materials.schema';
 
 @Injectable()
-export class InventoriesService {
+export class BillOfMaterialsService {
   constructor(
-    @InjectRepository(Inventory)
-    private readonly inventoryRepository: Repository<Inventory>,
+    @InjectRepository(BillOfMaterial)
+    private readonly billOfMaterialRepository: Repository<BillOfMaterial>,
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
-  private toAuditValues(inventory: Inventory) {
+  private toAuditValues(entry: BillOfMaterial) {
     return {
-      id: inventory.id,
-      partId: inventory.partId,
-      warehouseId: inventory.warehouseId,
-      quantity: inventory.quantity,
-      createdAt: inventory.createdAt,
-      updatedAt: inventory.updatedAt,
-      deletedAt: inventory.deletedAt,
+      id: entry.id,
+      finishedPartId: entry.finishedPartId,
+      rawPartId: entry.rawPartId,
+      quantity: entry.quantity,
+      unit: entry.unit,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+      deletedAt: entry.deletedAt,
     };
   }
 
@@ -42,7 +43,7 @@ export class InventoriesService {
   }) {
     try {
       await this.auditLogsService.create({
-        tableName: 'inventories',
+        tableName: 'bill_of_materials',
         recordId: input.recordId,
         action: input.action,
         oldValues: input.oldValues,
@@ -57,16 +58,16 @@ export class InventoriesService {
     const [sortField, sortDirRaw] = sort.split(':');
     const sortDir = sortDirRaw?.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
-    if (sortField === 'partId') {
-      return { partId: sortDir };
+    if (sortField === 'finishedPartId') {
+      return { finishedPartId: sortDir };
     }
 
-    if (sortField === 'warehouseId') {
-      return { warehouseId: sortDir };
+    if (sortField === 'rawPartId') {
+      return { rawPartId: sortDir };
     }
 
-    if (sortField === 'quantity') {
-      return { quantity: sortDir };
+    if (sortField === 'unit') {
+      return { unit: sortDir };
     }
 
     return { createdAt: sortDir };
@@ -75,32 +76,27 @@ export class InventoriesService {
   private buildWhere(
     search?: string,
     q?: string,
-  ): FindOptionsWhere<Inventory> | FindOptionsWhere<Inventory>[] {
-    const term = (search ?? q)?.trim();
+  ): FindOptionsWhere<BillOfMaterial> | FindOptionsWhere<BillOfMaterial>[] {
+    const term = search?.trim() || q?.trim();
 
     if (!term) {
       return { deletedAt: IsNull() };
     }
 
     return [
-      {
-        deletedAt: IsNull(),
-        partId: Like(`%${term}%`),
-      },
-      {
-        deletedAt: IsNull(),
-        warehouseId: Like(`%${term}%`),
-      },
+      { deletedAt: IsNull(), finishedPartId: Like(`%${term}%`) },
+      { deletedAt: IsNull(), rawPartId: Like(`%${term}%`) },
+      { deletedAt: IsNull(), unit: Like(`%${term}%`) },
     ];
   }
 
-  async findAll(query: ListInventoriesQuery) {
+  async findAll(query: ListBillOfMaterialsQuery) {
     const { page, limit, q, search, sort } = query;
     const where = this.buildWhere(search, q);
     const order = this.resolveOrder(sort);
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.inventoryRepository.findAndCount({
+    const [data, total] = await this.billOfMaterialRepository.findAndCount({
       where,
       order,
       skip,
@@ -118,35 +114,38 @@ export class InventoriesService {
     };
   }
 
-  async findOne(id: string): Promise<Inventory> {
-    const inventory = await this.inventoryRepository.findOne({
+  async findOne(id: string): Promise<BillOfMaterial> {
+    const entry = await this.billOfMaterialRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
+
+    if (!entry) {
+      throw new NotFoundException('Bill of material not found');
+    }
+
+    return entry;
+  }
+
+  async create(input: CreateBillOfMaterialInput): Promise<BillOfMaterial> {
+    const existing = await this.billOfMaterialRepository.findOne({
       where: {
-        id,
-        deletedAt: IsNull(),
+        finishedPartId: input.finishedPartId,
+        rawPartId: input.rawPartId,
       },
     });
 
-    if (!inventory) {
-      throw new NotFoundException('Inventory not found');
-    }
-
-    return inventory;
-  }
-
-  async create(input: CreateInventoryInput): Promise<Inventory> {
-    const existing = await this.inventoryRepository.findOne({
-      where: { partId: input.partId, warehouseId: input.warehouseId },
-    });
-
     if (existing && !existing.deletedAt) {
-      throw new ConflictException('Inventory for part and warehouse already exists');
+      throw new ConflictException(
+        'BOM entry for finished part and raw part already exists',
+      );
     }
 
     if (existing && existing.deletedAt) {
       const oldValues = this.toAuditValues(existing);
       existing.quantity = input.quantity.toFixed(4);
+      existing.unit = input.unit;
       existing.deletedAt = null;
-      await this.inventoryRepository.save(existing);
+      await this.billOfMaterialRepository.save(existing);
       await this.writeAuditLog({
         recordId: existing.id,
         action: 'UPDATE',
@@ -156,56 +155,62 @@ export class InventoriesService {
       return this.findOne(existing.id);
     }
 
-    const entity = this.inventoryRepository.create({
+    const entity = this.billOfMaterialRepository.create({
       id: randomUUID(),
-      partId: input.partId,
-      warehouseId: input.warehouseId,
+      finishedPartId: input.finishedPartId,
+      rawPartId: input.rawPartId,
       quantity: input.quantity.toFixed(4),
+      unit: input.unit,
     });
 
-    await this.inventoryRepository.save(entity);
+    await this.billOfMaterialRepository.save(entity);
     await this.writeAuditLog({
       recordId: entity.id,
       action: 'INSERT',
+      oldValues: undefined,
       newValues: this.toAuditValues(entity),
     });
     return this.findOne(entity.id);
   }
 
-  async update(id: string, input: UpdateInventoryInput): Promise<Inventory> {
+  async update(
+    id: string,
+    input: UpdateBillOfMaterialInput,
+  ): Promise<BillOfMaterial> {
     const existing = await this.findOne(id);
     const oldValues = this.toAuditValues(existing);
 
-    const nextPartId = input.partId ?? existing.partId;
-    const nextWarehouseId = input.warehouseId ?? existing.warehouseId;
+    const nextFinishedPartId = input.finishedPartId ?? existing.finishedPartId;
+    const nextRawPartId = input.rawPartId ?? existing.rawPartId;
 
     if (
-      nextPartId !== existing.partId ||
-      nextWarehouseId !== existing.warehouseId
+      nextFinishedPartId !== existing.finishedPartId ||
+      nextRawPartId !== existing.rawPartId
     ) {
-      const duplicate = await this.inventoryRepository.findOne({
+      const duplicate = await this.billOfMaterialRepository.findOne({
         where: {
-          partId: nextPartId,
-          warehouseId: nextWarehouseId,
+          finishedPartId: nextFinishedPartId,
+          rawPartId: nextRawPartId,
           deletedAt: IsNull(),
         },
       });
 
       if (duplicate) {
         throw new ConflictException(
-          'Inventory for part and warehouse already exists',
+          'BOM entry for finished part and raw part already exists',
         );
       }
     }
 
-    existing.partId = nextPartId;
-    existing.warehouseId = nextWarehouseId;
+    existing.finishedPartId = nextFinishedPartId;
+    existing.rawPartId = nextRawPartId;
     existing.quantity =
       typeof input.quantity === 'number'
         ? input.quantity.toFixed(4)
         : existing.quantity;
+    existing.unit = input.unit ?? existing.unit;
 
-    await this.inventoryRepository.save(existing);
+    await this.billOfMaterialRepository.save(existing);
     await this.writeAuditLog({
       recordId: existing.id,
       action: 'UPDATE',
@@ -219,7 +224,7 @@ export class InventoriesService {
     const existing = await this.findOne(id);
     const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
-    await this.inventoryRepository.save(existing);
+    await this.billOfMaterialRepository.save(existing);
     await this.writeAuditLog({
       recordId: existing.id,
       action: 'DELETE',
@@ -228,3 +233,4 @@ export class InventoriesService {
     });
   }
 }
+

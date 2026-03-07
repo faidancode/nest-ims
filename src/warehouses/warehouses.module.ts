@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { PermissionsGuard } from '../common/rbac/permissions.guard';
 import { WarehouseController } from './warehouses.controller';
 import { Warehouse } from './warehouse.entity';
 import { WarehouseService } from './warehouses.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Warehouse])],
+  imports: [TypeOrmModule.forFeature([Warehouse]), AuditLogsModule],
   controllers: [WarehouseController],
   providers: [WarehouseService, PermissionsGuard],
   exports: [WarehouseService],

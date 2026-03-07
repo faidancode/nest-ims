@@ -2,11 +2,13 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { InventoryTransaction } from './inventory-transaction.entity';
 import { InventoryTransactionsService } from './inventory-transactions.service';
 
 describe('InventoryTransactionsServiceTest', () => {
   let service: InventoryTransactionsService;
+  let auditLogsService: jest.Mocked<Pick<AuditLogsService, 'create'>>;
   let inventoryTransactionRepository: jest.Mocked<
     Pick<
       Repository<InventoryTransaction>,
@@ -15,6 +17,10 @@ describe('InventoryTransactionsServiceTest', () => {
   >;
 
   beforeEach(async () => {
+    auditLogsService = {
+      create: jest.fn(),
+    };
+
     inventoryTransactionRepository = {
       findAndCount: jest.fn(),
       findOne: jest.fn(),
@@ -28,6 +34,10 @@ describe('InventoryTransactionsServiceTest', () => {
         {
           provide: getRepositoryToken(InventoryTransaction),
           useValue: inventoryTransactionRepository,
+        },
+        {
+          provide: AuditLogsService,
+          useValue: auditLogsService,
         },
       ],
     }).compile();

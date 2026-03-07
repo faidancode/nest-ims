@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { InventoryTransaction } from './inventory-transaction.entity';
 import {
   CreateInventoryTransactionInput,
@@ -14,7 +15,45 @@ export class InventoryTransactionsService {
   constructor(
     @InjectRepository(InventoryTransaction)
     private readonly inventoryTransactionRepository: Repository<InventoryTransaction>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
+
+  private toAuditValues(transaction: InventoryTransaction) {
+    return {
+      id: transaction.id,
+      partId: transaction.partId,
+      warehouseId: transaction.warehouseId,
+      type: transaction.type,
+      referenceType: transaction.referenceType,
+      referenceId: transaction.referenceId,
+      quantity: transaction.quantity,
+      quantityBefore: transaction.quantityBefore,
+      quantityAfter: transaction.quantityAfter,
+      notes: transaction.notes,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      deletedAt: transaction.deletedAt,
+    };
+  }
+
+  private async writeAuditLog(input: {
+    recordId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }) {
+    try {
+      await this.auditLogsService.create({
+        tableName: 'inventory_transactions',
+        recordId: input.recordId,
+        action: input.action,
+        oldValues: input.oldValues,
+        newValues: input.newValues,
+      });
+    } catch {
+      // Do not fail business transaction when audit logging fails.
+    }
+  }
 
   private resolveOrder(sort: string): Record<string, 'ASC' | 'DESC'> {
     const [sortField, sortDirRaw] = sort.split(':');
@@ -127,6 +166,11 @@ export class InventoryTransactionsService {
     });
 
     await this.inventoryTransactionRepository.save(entity);
+    await this.writeAuditLog({
+      recordId: entity.id,
+      action: 'INSERT',
+      newValues: this.toAuditValues(entity),
+    });
     return this.findOne(entity.id);
   }
 
@@ -135,6 +179,7 @@ export class InventoryTransactionsService {
     input: UpdateInventoryTransactionInput,
   ): Promise<InventoryTransaction> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
 
     existing.partId = input.partId ?? existing.partId;
     existing.warehouseId = input.warehouseId ?? existing.warehouseId;
@@ -156,12 +201,25 @@ export class InventoryTransactionsService {
     existing.notes = input.notes ?? existing.notes;
 
     await this.inventoryTransactionRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'UPDATE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
     await this.inventoryTransactionRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'DELETE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
   }
 }

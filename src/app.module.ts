@@ -17,6 +17,8 @@ import { InventoryTransactionsModule } from './inventory-transactions/inventory-
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { SalesOrdersModule } from './sales-orders/sales-orders.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { BillOfMaterialsModule } from './bill-of-materials/bill-of-materials.module';
+import { ProductionOrdersModule } from './production-orders/production-orders.module';
 
 @Module({
   //agar tidak perlu import config module
@@ -34,6 +36,8 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     PurchaseOrdersModule,
     SalesOrdersModule,
     AuditLogsModule,
+    BillOfMaterialsModule,
+    ProductionOrdersModule,
   ],
   controllers: [],
   providers: [

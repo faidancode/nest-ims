@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { Customer } from './customer.entity';
 import {
   CreateCustomerInput,
@@ -18,7 +19,42 @@ export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
+
+  private toAuditValues(customer: Customer) {
+    return {
+      id: customer.id,
+      name: customer.name,
+      contactName: customer.contactName,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      isActive: customer.isActive,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+      deletedAt: customer.deletedAt,
+    };
+  }
+
+  private async writeAuditLog(input: {
+    recordId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }) {
+    try {
+      await this.auditLogsService.create({
+        tableName: 'customers',
+        recordId: input.recordId,
+        action: input.action,
+        oldValues: input.oldValues,
+        newValues: input.newValues,
+      });
+    } catch {
+      // Do not fail business transaction when audit logging fails.
+    }
+  }
 
   private resolveOrder(sort: string): Record<string, 'ASC' | 'DESC'> {
     const [sortField, sortDirRaw] = sort.split(':');
@@ -118,6 +154,7 @@ export class CustomersService {
     }
 
     if (existing && existing.deletedAt) {
+      const oldValues = this.toAuditValues(existing);
       existing.contactName = input.contactName ?? null;
       existing.email = input.email ?? null;
       existing.phone = input.phone ?? null;
@@ -125,6 +162,12 @@ export class CustomersService {
       existing.isActive = input.active ?? true;
       existing.deletedAt = null;
       await this.customerRepository.save(existing);
+      await this.writeAuditLog({
+        recordId: existing.id,
+        action: 'UPDATE',
+        oldValues,
+        newValues: this.toAuditValues(existing),
+      });
       return this.findOne(existing.id);
     }
 
@@ -139,11 +182,17 @@ export class CustomersService {
     });
 
     await this.customerRepository.save(entity);
+    await this.writeAuditLog({
+      recordId: entity.id,
+      action: 'INSERT',
+      newValues: this.toAuditValues(entity),
+    });
     return this.findOne(entity.id);
   }
 
   async update(id: string, input: UpdateCustomerInput): Promise<Customer> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
 
     if (input.name && input.name !== existing.name) {
       const duplicate = await this.customerRepository.findOne({
@@ -164,12 +213,25 @@ export class CustomersService {
       typeof input.active === 'boolean' ? input.active : existing.isActive;
 
     await this.customerRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'UPDATE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
     await this.customerRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'DELETE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
   }
 }

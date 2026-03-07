@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { Part } from './part.entity';
 import {
   CreatePartInput,
@@ -18,7 +19,41 @@ export class PartsService {
   constructor(
     @InjectRepository(Part)
     private readonly partRepository: Repository<Part>,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
+
+  private toAuditValues(part: Part) {
+    return {
+      id: part.id,
+      partNumber: part.partNumber,
+      name: part.name,
+      description: part.description,
+      type: part.type,
+      unit: part.unit,
+      createdAt: part.createdAt,
+      updatedAt: part.updatedAt,
+      deletedAt: part.deletedAt,
+    };
+  }
+
+  private async writeAuditLog(input: {
+    recordId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }) {
+    try {
+      await this.auditLogsService.create({
+        tableName: 'parts',
+        recordId: input.recordId,
+        action: input.action,
+        oldValues: input.oldValues,
+        newValues: input.newValues,
+      });
+    } catch {
+      // Do not fail business transaction when audit logging fails.
+    }
+  }
 
   private resolveOrder(sort: string): Record<string, 'ASC' | 'DESC'> {
     const [sortField, sortDirRaw] = sort.split(':');
@@ -114,12 +149,19 @@ export class PartsService {
     }
 
     if (existing && existing.deletedAt) {
+      const oldValues = this.toAuditValues(existing);
       existing.name = input.name;
       existing.description = input.description ?? null;
       existing.type = input.type;
       existing.unit = input.unit;
       existing.deletedAt = null;
       await this.partRepository.save(existing);
+      await this.writeAuditLog({
+        recordId: existing.id,
+        action: 'UPDATE',
+        oldValues,
+        newValues: this.toAuditValues(existing),
+      });
       return this.findOne(existing.id);
     }
 
@@ -133,11 +175,17 @@ export class PartsService {
     });
 
     await this.partRepository.save(entity);
+    await this.writeAuditLog({
+      recordId: entity.id,
+      action: 'INSERT',
+      newValues: this.toAuditValues(entity),
+    });
     return this.findOne(entity.id);
   }
 
   async update(id: string, input: UpdatePartInput): Promise<Part> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
 
     if (input.partNumber && input.partNumber !== existing.partNumber) {
       const duplicate = await this.partRepository.findOne({
@@ -156,12 +204,25 @@ export class PartsService {
     existing.unit = input.unit ?? existing.unit;
 
     await this.partRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'UPDATE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id);
+    const oldValues = this.toAuditValues(existing);
     existing.deletedAt = new Date();
     await this.partRepository.save(existing);
+    await this.writeAuditLog({
+      recordId: existing.id,
+      action: 'DELETE',
+      oldValues,
+      newValues: this.toAuditValues(existing),
+    });
   }
 }

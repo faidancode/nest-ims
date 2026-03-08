@@ -174,7 +174,7 @@ describe('WarehouseServiceTest', () => {
       const result = await service.create({
         name: 'Main Warehouse',
         location: 'Jakarta',
-        active: true,
+        isActive: true,
       });
 
       expect(warehouseRepository.create).toHaveBeenCalledWith(
@@ -200,7 +200,7 @@ describe('WarehouseServiceTest', () => {
           service.create({
             name: 'Main Warehouse',
             location: undefined,
-            active: true,
+            isActive: true,
           }),
         ).rejects.toThrow(ConflictException);
       });
@@ -224,14 +224,14 @@ describe('WarehouseServiceTest', () => {
       await service.update('wh-1', {
         name: 'Updated Warehouse',
         location: 'Bandung',
-        active: false,
+        isActive: true,
       });
 
       expect(warehouseRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Updated Warehouse',
           location: 'Bandung',
-          isActive: false,
+          isActive: true,
         }),
       );
     });

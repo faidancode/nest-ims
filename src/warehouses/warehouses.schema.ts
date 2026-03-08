@@ -34,7 +34,7 @@ export const CreateWarehouseSchema = z.object({
     })
     .max(500, 'Lokasi maksimal 500 karakter')
     .optional(),
-  active: z
+  isActive: z
     .boolean({
       message: 'Status aktif harus berupa boolean',
     })

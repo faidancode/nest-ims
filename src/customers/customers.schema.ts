@@ -51,7 +51,7 @@ export const CreateCustomerSchema = z.object({
       message: 'Alamat harus berupa string',
     })
     .optional(),
-  active: z
+  isActive: z
     .boolean({
       message: 'Status aktif harus berupa boolean',
     })

@@ -105,7 +105,9 @@ describe('CustomersServiceTest', () => {
 
     describe('Negative Scenarios', () => {
       it('should throw error when repository fails', async () => {
-        customerRepository.findAndCount.mockRejectedValue(new Error('DB failure'));
+        customerRepository.findAndCount.mockRejectedValue(
+          new Error('DB failure'),
+        );
 
         await expect(
           service.findAll({
@@ -177,7 +179,7 @@ describe('CustomersServiceTest', () => {
         email: 'customer@example.com',
         phone: '08123456789',
         address: 'Bandung',
-        active: true,
+        isActive: true,
       });
 
       expect(customerRepository.create).toHaveBeenCalledWith(
@@ -209,7 +211,7 @@ describe('CustomersServiceTest', () => {
             email: undefined,
             phone: undefined,
             address: undefined,
-            active: true,
+            isActive: true,
           }),
         ).rejects.toThrow(ConflictException);
       });
@@ -236,14 +238,14 @@ describe('CustomersServiceTest', () => {
       await service.update('cus-1', {
         name: 'PT Customer B',
         contactName: 'Rina',
-        active: false,
+        isActive: true,
       });
 
       expect(customerRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'PT Customer B',
           contactName: 'Rina',
-          isActive: false,
+          isActive: true,
         }),
       );
     });
@@ -263,9 +265,9 @@ describe('CustomersServiceTest', () => {
           deletedAt: null,
         } as Customer);
 
-        await expect(service.update('cus-1', { name: 'PT Customer B' })).rejects.toThrow(
-          ConflictException,
-        );
+        await expect(
+          service.update('cus-1', { name: 'PT Customer B' }),
+        ).rejects.toThrow(ConflictException);
       });
     });
   });

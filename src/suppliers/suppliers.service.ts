@@ -159,7 +159,7 @@ export class SuppliersService {
       existing.email = input.email ?? null;
       existing.phone = input.phone ?? null;
       existing.address = input.address ?? null;
-      existing.isActive = input.active ?? true;
+      existing.isActive = input.isActive ?? true;
       existing.deletedAt = null;
       await this.supplierRepository.save(existing);
       await this.writeAuditLog({
@@ -178,7 +178,7 @@ export class SuppliersService {
       email: input.email ?? null,
       phone: input.phone ?? null,
       address: input.address ?? null,
-      isActive: input.active ?? true,
+      isActive: input.isActive ?? true,
     });
 
     await this.supplierRepository.save(entity);
@@ -210,7 +210,7 @@ export class SuppliersService {
     existing.phone = input.phone ?? existing.phone;
     existing.address = input.address ?? existing.address;
     existing.isActive =
-      typeof input.active === 'boolean' ? input.active : existing.isActive;
+      typeof input.isActive === 'boolean' ? input.isActive : existing.isActive;
 
     await this.supplierRepository.save(existing);
     await this.writeAuditLog({

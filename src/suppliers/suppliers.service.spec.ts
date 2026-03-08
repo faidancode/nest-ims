@@ -179,7 +179,7 @@ describe('SuppliersServiceTest', () => {
         email: 'supplier@example.com',
         phone: '08123456789',
         address: 'Jakarta',
-        active: true,
+        isActive: true,
       });
 
       expect(supplierRepository.create).toHaveBeenCalledWith(
@@ -211,7 +211,7 @@ describe('SuppliersServiceTest', () => {
             email: undefined,
             phone: undefined,
             address: undefined,
-            active: true,
+            isActive: true,
           }),
         ).rejects.toThrow(ConflictException);
       });
@@ -238,14 +238,14 @@ describe('SuppliersServiceTest', () => {
       await service.update('sup-1', {
         name: 'PT Supplier B',
         contactName: 'Agus',
-        active: false,
+        isActive: true,
       });
 
       expect(supplierRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'PT Supplier B',
           contactName: 'Agus',
-          isActive: false,
+          isActive: true,
         }),
       );
     });
@@ -265,9 +265,9 @@ describe('SuppliersServiceTest', () => {
           deletedAt: null,
         } as Supplier);
 
-        await expect(service.update('sup-1', { name: 'PT Supplier B' })).rejects.toThrow(
-          ConflictException,
-        );
+        await expect(
+          service.update('sup-1', { name: 'PT Supplier B' }),
+        ).rejects.toThrow(ConflictException);
       });
     });
   });

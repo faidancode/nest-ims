@@ -141,7 +141,7 @@ export class WarehouseService {
     if (existing && existing.deletedAt) {
       const oldValues = this.toAuditValues(existing);
       existing.location = input.location ?? null;
-      existing.isActive = input.active ?? true;
+      existing.isActive = input.isActive ?? true;
       existing.deletedAt = null;
       await this.warehouseRepository.save(existing);
       await this.writeAuditLog({
@@ -157,7 +157,7 @@ export class WarehouseService {
       id: randomUUID(),
       name: input.name,
       location: input.location ?? null,
-      isActive: input.active ?? true,
+      isActive: input.isActive ?? true,
     });
 
     await this.warehouseRepository.save(entity);
@@ -186,7 +186,7 @@ export class WarehouseService {
     existing.name = input.name ?? existing.name;
     existing.location = input.location ?? existing.location;
     existing.isActive =
-      typeof input.active === 'boolean' ? input.active : existing.isActive;
+      typeof input.isActive === 'boolean' ? input.isActive : existing.isActive;
 
     await this.warehouseRepository.save(existing);
     await this.writeAuditLog({

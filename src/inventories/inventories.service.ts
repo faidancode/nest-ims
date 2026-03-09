@@ -133,13 +133,30 @@ export class InventoriesService {
     return inventory;
   }
 
+  // src/inventories/inventories.service.ts
+
+  async findByPartAndWarehouse(
+    partId: string,
+    warehouseId: string,
+  ): Promise<Inventory | null> {
+    return await this.inventoryRepository.findOne({
+      where: {
+        partId,
+        warehouseId,
+        deletedAt: IsNull(),
+      },
+    });
+  }
+
   async create(input: CreateInventoryInput): Promise<Inventory> {
     const existing = await this.inventoryRepository.findOne({
       where: { partId: input.partId, warehouseId: input.warehouseId },
     });
 
     if (existing && !existing.deletedAt) {
-      throw new ConflictException('Inventory for part and warehouse already exists');
+      throw new ConflictException(
+        'Inventory for part and warehouse already exists',
+      );
     }
 
     if (existing && existing.deletedAt) {
@@ -213,18 +230,5 @@ export class InventoriesService {
       newValues: this.toAuditValues(existing),
     });
     return this.findOne(id);
-  }
-
-  async remove(id: string): Promise<void> {
-    const existing = await this.findOne(id);
-    const oldValues = this.toAuditValues(existing);
-    existing.deletedAt = new Date();
-    await this.inventoryRepository.save(existing);
-    await this.writeAuditLog({
-      recordId: existing.id,
-      action: 'DELETE',
-      oldValues,
-      newValues: this.toAuditValues(existing),
-    });
   }
 }

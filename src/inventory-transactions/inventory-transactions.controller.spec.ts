@@ -19,8 +19,6 @@ describe('InventoryTransactionsControllerTest', () => {
       findAll: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
-      update: jest.fn(),
-      remove: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -141,8 +139,6 @@ describe('InventoryTransactionsControllerTest', () => {
         referenceType: 'PO',
         referenceId: '33333333-3333-4333-8333-333333333333',
         quantity: 5,
-        quantityBefore: 10,
-        quantityAfter: 15,
         notes: 'Incoming stock',
       });
 
@@ -153,8 +149,6 @@ describe('InventoryTransactionsControllerTest', () => {
         referenceType: 'PO',
         referenceId: '33333333-3333-4333-8333-333333333333',
         quantity: 5,
-        quantityBefore: 10,
-        quantityAfter: 15,
         notes: 'Incoming stock',
       });
       expect(result).toEqual(ok(payload));
@@ -172,54 +166,6 @@ describe('InventoryTransactionsControllerTest', () => {
           quantityAfter: 15,
         });
         expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  describe('InventoryTransactionsControllerTest_Update', () => {
-    it('should update inventory transaction', async () => {
-      const payload = { id: 'txn-1', type: 'OUT' };
-      service.update.mockResolvedValue(payload as never);
-
-      const result = await controller.update('txn-1', {
-        type: 'OUT',
-      });
-
-      expect(service.update).toHaveBeenCalledWith('txn-1', {
-        type: 'OUT',
-      });
-      expect(result).toEqual(ok(payload));
-    });
-
-    describe('Negative Scenarios', () => {
-      it('should reject invalid update payload via schema', () => {
-        const result = CreateInventoryTransactionSchema.partial().safeParse({
-          type: 'INVALID',
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  describe('InventoryTransactionsControllerTest_Delete', () => {
-    it('should remove inventory transaction', async () => {
-      service.remove.mockResolvedValue(undefined);
-
-      const result = await controller.remove('txn-1');
-
-      expect(service.remove).toHaveBeenCalledWith('txn-1');
-      expect(result).toEqual(okNoContent());
-    });
-
-    describe('Negative Scenarios', () => {
-      it('should throw when service remove fails', async () => {
-        service.remove.mockRejectedValue(
-          new NotFoundException('Inventory transaction not found'),
-        );
-
-        await expect(controller.remove('missing')).rejects.toThrow(
-          NotFoundException,
-        );
       });
     });
   });
@@ -248,23 +194,9 @@ describe('InventoryTransactionsControllerTest', () => {
         REQUIRED_PERMISSIONS_KEY,
         InventoryTransactionsController.prototype.create,
       );
-      const updatePermissions = Reflect.getMetadata(
-        REQUIRED_PERMISSIONS_KEY,
-        InventoryTransactionsController.prototype.update,
-      );
-      const removePermissions = Reflect.getMetadata(
-        REQUIRED_PERMISSIONS_KEY,
-        InventoryTransactionsController.prototype.remove,
-      );
 
       expect(createPermissions).toEqual([
         { action: 'CREATE', resource: 'INVENTORY_TRANSACTION' },
-      ]);
-      expect(updatePermissions).toEqual([
-        { action: 'UPDATE', resource: 'INVENTORY_TRANSACTION' },
-      ]);
-      expect(removePermissions).toEqual([
-        { action: 'DELETE', resource: 'INVENTORY_TRANSACTION' },
       ]);
     });
   });

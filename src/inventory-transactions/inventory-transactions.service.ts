@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
+import { InventoriesService } from '../inventories/inventories.service';
 import { FindOptionsWhere, IsNull, Like, Repository } from 'typeorm';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { InventoryTransaction } from './inventory-transaction.entity';
 import {
   CreateInventoryTransactionInput,
   ListInventoryTransactionsQuery,
-  UpdateInventoryTransactionInput,
 } from './inventory-transactions.schema';
 
 @Injectable()
@@ -15,6 +15,7 @@ export class InventoryTransactionsService {
   constructor(
     @InjectRepository(InventoryTransaction)
     private readonly inventoryTransactionRepository: Repository<InventoryTransaction>,
+    private readonly inventoryRepository: InventoriesService,
     private readonly auditLogsService: AuditLogsService,
   ) {}
 
@@ -116,12 +117,13 @@ export class InventoryTransactionsService {
     const order = this.resolveOrder(sort);
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.inventoryTransactionRepository.findAndCount({
-      where,
-      order,
-      skip,
-      take: limit,
-    });
+    const [data, total] =
+      await this.inventoryTransactionRepository.findAndCount({
+        where,
+        order,
+        skip,
+        take: limit,
+      });
 
     return {
       data,
@@ -135,12 +137,13 @@ export class InventoryTransactionsService {
   }
 
   async findOne(id: string): Promise<InventoryTransaction> {
-    const inventoryTransaction = await this.inventoryTransactionRepository.findOne({
-      where: {
-        id,
-        deletedAt: IsNull(),
-      },
-    });
+    const inventoryTransaction =
+      await this.inventoryTransactionRepository.findOne({
+        where: {
+          id,
+          deletedAt: IsNull(),
+        },
+      });
 
     if (!inventoryTransaction) {
       throw new NotFoundException('Inventory transaction not found');
@@ -152,6 +155,20 @@ export class InventoryTransactionsService {
   async create(
     input: CreateInventoryTransactionInput,
   ): Promise<InventoryTransaction> {
+    const currentStock = await this.inventoryRepository.findByPartAndWarehouse(
+      input.partId,
+      input.warehouseId,
+    );
+
+    const quantityBefore = currentStock ? Number(currentStock.quantity) : 0;
+
+    // 2. Hitung quantityAfter berdasarkan tipe transaksi
+    let quantityAfter: number;
+    if (input.type === 'IN') {
+      quantityAfter = quantityBefore + input.quantity;
+    } else {
+      quantityAfter = quantityBefore - input.quantity;
+    }
     const entity = this.inventoryTransactionRepository.create({
       id: randomUUID(),
       partId: input.partId,
@@ -160,8 +177,8 @@ export class InventoryTransactionsService {
       referenceType: input.referenceType,
       referenceId: input.referenceId ?? null,
       quantity: input.quantity.toFixed(4),
-      quantityBefore: input.quantityBefore.toFixed(4),
-      quantityAfter: input.quantityAfter.toFixed(4),
+      quantityBefore: quantityBefore.toFixed(4),
+      quantityAfter: quantityAfter.toFixed(4),
       notes: input.notes ?? null,
     });
 
@@ -172,54 +189,5 @@ export class InventoryTransactionsService {
       newValues: this.toAuditValues(entity),
     });
     return this.findOne(entity.id);
-  }
-
-  async update(
-    id: string,
-    input: UpdateInventoryTransactionInput,
-  ): Promise<InventoryTransaction> {
-    const existing = await this.findOne(id);
-    const oldValues = this.toAuditValues(existing);
-
-    existing.partId = input.partId ?? existing.partId;
-    existing.warehouseId = input.warehouseId ?? existing.warehouseId;
-    existing.type = input.type ?? existing.type;
-    existing.referenceType = input.referenceType ?? existing.referenceType;
-    existing.referenceId = input.referenceId ?? existing.referenceId;
-    existing.quantity =
-      typeof input.quantity === 'number'
-        ? input.quantity.toFixed(4)
-        : existing.quantity;
-    existing.quantityBefore =
-      typeof input.quantityBefore === 'number'
-        ? input.quantityBefore.toFixed(4)
-        : existing.quantityBefore;
-    existing.quantityAfter =
-      typeof input.quantityAfter === 'number'
-        ? input.quantityAfter.toFixed(4)
-        : existing.quantityAfter;
-    existing.notes = input.notes ?? existing.notes;
-
-    await this.inventoryTransactionRepository.save(existing);
-    await this.writeAuditLog({
-      recordId: existing.id,
-      action: 'UPDATE',
-      oldValues,
-      newValues: this.toAuditValues(existing),
-    });
-    return this.findOne(id);
-  }
-
-  async remove(id: string): Promise<void> {
-    const existing = await this.findOne(id);
-    const oldValues = this.toAuditValues(existing);
-    existing.deletedAt = new Date();
-    await this.inventoryTransactionRepository.save(existing);
-    await this.writeAuditLog({
-      recordId: existing.id,
-      action: 'DELETE',
-      oldValues,
-      newValues: this.toAuditValues(existing),
-    });
   }
 }

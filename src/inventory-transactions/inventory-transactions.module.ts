@@ -5,9 +5,14 @@ import { PermissionsGuard } from '../common/rbac/permissions.guard';
 import { InventoryTransaction } from './inventory-transaction.entity';
 import { InventoryTransactionsController } from './inventory-transactions.controller';
 import { InventoryTransactionsService } from './inventory-transactions.service';
+import { InventoriesModule } from '../inventories/inventories.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([InventoryTransaction]), AuditLogsModule],
+  imports: [
+    TypeOrmModule.forFeature([InventoryTransaction]),
+    AuditLogsModule,
+    InventoriesModule,
+  ],
   controllers: [InventoryTransactionsController],
   providers: [InventoryTransactionsService, PermissionsGuard],
   exports: [InventoryTransactionsService],

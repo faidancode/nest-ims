@@ -73,12 +73,4 @@ export class InventoriesController {
     const result = await this.inventoriesService.update(id, body);
     return ok(result);
   }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @RequirePermissions({ action: 'DELETE', resource: 'INVENTORY' })
-  async remove(@Param('id') id: string) {
-    await this.inventoriesService.remove(id);
-    return okNoContent();
-  }
 }

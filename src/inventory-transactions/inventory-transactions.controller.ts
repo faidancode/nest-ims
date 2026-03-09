@@ -64,23 +64,4 @@ export class InventoryTransactionsController {
     const result = await this.inventoryTransactionsService.create(body);
     return ok(result);
   }
-
-  @Patch(':id')
-  @RequirePermissions({ action: 'UPDATE', resource: 'INVENTORY_TRANSACTION' })
-  async update(
-    @Param('id') id: string,
-    @Body(new ZodValidationPipe(UpdateInventoryTransactionSchema))
-    body: UpdateInventoryTransactionInput,
-  ) {
-    const result = await this.inventoryTransactionsService.update(id, body);
-    return ok(result);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @RequirePermissions({ action: 'DELETE', resource: 'INVENTORY_TRANSACTION' })
-  async remove(@Param('id') id: string) {
-    await this.inventoryTransactionsService.remove(id);
-    return okNoContent();
-  }
 }

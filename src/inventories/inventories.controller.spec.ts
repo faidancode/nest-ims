@@ -18,7 +18,6 @@ describe('InventoriesControllerTest', () => {
       findOne: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
-      remove: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -179,29 +178,6 @@ describe('InventoriesControllerTest', () => {
     });
   });
 
-  describe('InventoriesControllerTest_Delete', () => {
-    it('should remove inventory', async () => {
-      service.remove.mockResolvedValue(undefined);
-
-      const result = await controller.remove('inv-1');
-
-      expect(service.remove).toHaveBeenCalledWith('inv-1');
-      expect(result).toEqual(okNoContent());
-    });
-
-    describe('Negative Scenarios', () => {
-      it('should throw when service remove fails', async () => {
-        service.remove.mockRejectedValue(
-          new NotFoundException('Inventory not found'),
-        );
-
-        await expect(controller.remove('missing')).rejects.toThrow(
-          NotFoundException,
-        );
-      });
-    });
-  });
-
   describe('InventoriesControllerTest_RBACMetadata', () => {
     it('should require READ permission for findAll and findOne', () => {
       const findAllPermissions = Reflect.getMetadata(
@@ -230,19 +206,12 @@ describe('InventoriesControllerTest', () => {
         REQUIRED_PERMISSIONS_KEY,
         InventoriesController.prototype.update,
       );
-      const removePermissions = Reflect.getMetadata(
-        REQUIRED_PERMISSIONS_KEY,
-        InventoriesController.prototype.remove,
-      );
 
       expect(createPermissions).toEqual([
         { action: 'CREATE', resource: 'INVENTORY' },
       ]);
       expect(updatePermissions).toEqual([
         { action: 'UPDATE', resource: 'INVENTORY' },
-      ]);
-      expect(removePermissions).toEqual([
-        { action: 'DELETE', resource: 'INVENTORY' },
       ]);
     });
   });

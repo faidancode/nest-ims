@@ -55,12 +55,6 @@ export const CreateInventoryTransactionSchema = z.object({
   quantity: z.number({
     message: 'Quantity harus berupa angka',
   }),
-  quantityBefore: z.number({
-    message: 'Quantity before harus berupa angka',
-  }),
-  quantityAfter: z.number({
-    message: 'Quantity after harus berupa angka',
-  }),
   notes: z.string().optional(),
 });
 

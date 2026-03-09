@@ -103,7 +103,9 @@ describe('InventoriesServiceTest', () => {
 
     describe('Negative Scenarios', () => {
       it('should throw error when repository fails', async () => {
-        inventoryRepository.findAndCount.mockRejectedValue(new Error('DB failure'));
+        inventoryRepository.findAndCount.mockRejectedValue(
+          new Error('DB failure'),
+        );
 
         await expect(
           service.findAll({
@@ -255,38 +257,6 @@ describe('InventoriesServiceTest', () => {
             warehouseId: '44444444-4444-4444-8444-444444444444',
           }),
         ).rejects.toThrow(ConflictException);
-      });
-    });
-  });
-
-  describe('InventoriesServiceTest_Remove', () => {
-    it('should soft delete inventory', async () => {
-      const existing = {
-        id: 'inv-1',
-        quantity: '10.0000',
-        deletedAt: null,
-      } as Inventory;
-
-      jest.spyOn(service, 'findOne').mockResolvedValue(existing);
-      inventoryRepository.save.mockResolvedValue(existing);
-
-      await service.remove('inv-1');
-
-      expect(inventoryRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ deletedAt: expect.any(Date) }),
-      );
-    });
-
-    describe('Negative Scenarios', () => {
-      it('should throw when inventory to remove is not found', async () => {
-        jest
-          .spyOn(service, 'findOne')
-          .mockRejectedValue(new NotFoundException('Inventory not found'));
-
-        await expect(service.remove('missing')).rejects.toThrow(
-          NotFoundException,
-        );
-        expect(inventoryRepository.save).not.toHaveBeenCalled();
       });
     });
   });

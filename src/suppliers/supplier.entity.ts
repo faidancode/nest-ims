@@ -1,8 +1,10 @@
+import { PurchaseOrder } from 'src/purchase-orders/purchase-order.entity';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,7 +17,12 @@ export class Supplier {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ name: 'contact_name', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'contact_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   contactName: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -47,4 +54,7 @@ export class Supplier {
 
   @Column({ name: 'deleted_by', type: 'char', length: 36, nullable: true })
   deletedBy: string | null;
+
+  @OneToMany(() => PurchaseOrder, (purchaseOrder) => purchaseOrder.supplier)
+  purchaseOrders: PurchaseOrder[];
 }

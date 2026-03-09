@@ -115,6 +115,7 @@ export class PurchaseOrdersService {
       order,
       skip,
       take: limit,
+      relations: ['supplier'],
     });
 
     return {

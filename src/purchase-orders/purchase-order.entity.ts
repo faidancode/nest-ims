@@ -1,8 +1,11 @@
+import { Supplier } from 'src/suppliers/supplier.entity';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -52,4 +55,8 @@ export class PurchaseOrder {
 
   @Column({ name: 'approved_by', type: 'char', length: 36, nullable: true })
   approvedBy: string | null;
+
+  @ManyToOne(() => Supplier, (supplier) => supplier.purchaseOrders)
+  @JoinColumn({ name: 'supplier_id' }) // Mapping ke kolom DB
+  supplier: Supplier;
 }

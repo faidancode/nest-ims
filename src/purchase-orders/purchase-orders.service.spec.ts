@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { IsNull, Like, Repository } from 'typeorm';
+import { DataSource, IsNull, Like, Repository } from 'typeorm';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PurchaseOrder } from './purchase-order.entity';
 import { PurchaseOrdersService } from './purchase-orders.service';
@@ -10,8 +10,14 @@ describe('PurchaseOrdersServiceTest', () => {
   let service: PurchaseOrdersService;
   let auditLogsService: jest.Mocked<Pick<AuditLogsService, 'create'>>;
   let purchaseOrderRepository: jest.Mocked<
-    Pick<Repository<PurchaseOrder>, 'findAndCount' | 'findOne' | 'save' | 'create'>
+    Pick<
+      Repository<PurchaseOrder>,
+      'findAndCount' | 'findOne' | 'save' | 'create'
+    >
   >;
+
+  let mockManager: any;
+  let mockDataSource: any;
 
   beforeEach(async () => {
     auditLogsService = {
@@ -25,6 +31,18 @@ describe('PurchaseOrdersServiceTest', () => {
       create: jest.fn(),
     };
 
+    mockManager = {
+      create: jest.fn().mockImplementation((entity, data) => data),
+      save: jest
+        .fn()
+        .mockImplementation((data) => Promise.resolve({ id: 'po-1', ...data })),
+      findOne: jest.fn(), // Digunakan oleh generator
+    };
+
+    mockDataSource = {
+      transaction: jest.fn().mockImplementation((cb) => cb(mockManager)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PurchaseOrdersService,
@@ -35,6 +53,10 @@ describe('PurchaseOrdersServiceTest', () => {
         {
           provide: AuditLogsService,
           useValue: auditLogsService,
+        },
+        {
+          provide: DataSource, // Atau getDataSourceToken() jika menggunakan koneksi spesifik
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -122,16 +144,27 @@ describe('PurchaseOrdersServiceTest', () => {
 
   describe('PurchaseOrdersServiceTest_FindOne', () => {
     it('should return purchase order by id', async () => {
-      purchaseOrderRepository.findOne.mockResolvedValue({
+      // 1. Mock data harus menyertakan items agar lebih akurat dengan kondisi asli
+      const mockPO = {
         id: 'po-1',
-      } as PurchaseOrder);
+        items: [],
+        supplier: { id: 'supp-1', name: 'Supplier A' },
+      } as unknown as PurchaseOrder; // <--- Double casting
+
+      purchaseOrderRepository.findOne.mockResolvedValue(mockPO);
 
       const result = await service.findOne('po-1');
 
+      // 2. Sesuaikan expectation dengan kode terbaru di Service
       expect(purchaseOrderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'po-1', deletedAt: IsNull() },
+        where: {
+          id: 'po-1',
+          deletedAt: IsNull(),
+        },
+        relations: ['items', 'items.part', 'supplier'], // Ini harus sama persis dengan di service
       });
-      expect(result).toEqual({ id: 'po-1' });
+
+      expect(result).toEqual(mockPO);
     });
 
     describe('Negative Scenarios', () => {
@@ -146,45 +179,73 @@ describe('PurchaseOrdersServiceTest', () => {
   });
 
   describe('PurchaseOrdersServiceTest_Create', () => {
-    it('should create purchase order when number does not exist', async () => {
-      purchaseOrderRepository.findOne
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'po-1' } as PurchaseOrder);
-      purchaseOrderRepository.create.mockReturnValue({ id: 'po-1' } as PurchaseOrder);
-      purchaseOrderRepository.save.mockResolvedValue({ id: 'po-1' } as PurchaseOrder);
+    it('should create purchase order with auto-generated PO number', async () => {
+      // 1. Mock generator: Anggap belum ada PO sebelumnya (start 0001)
+      mockManager.findOne.mockResolvedValue(null);
 
-      const result = await service.create({
-        poNumber: 'PO-001',
+      // 2. Mock create & save
+      const mockPO = { id: 'po-uuid-123', poNumber: 'PO/2026/03/0001' };
+      mockManager.create.mockReturnValue(mockPO);
+      mockManager.save.mockResolvedValue(mockPO);
+
+      const input = {
         supplierId: '11111111-1111-4111-8111-111111111111',
-        status: 'DRAFT',
-      });
+        status: 'DRAFT' as const,
+        notes: 'Test note',
+      };
 
-      expect(purchaseOrderRepository.create).toHaveBeenCalledWith(
+      const result = await service.create(input);
+
+      // Verifikasi transaksi dimulai
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+
+      // Verifikasi generator dipanggil (mencari PO terakhir)
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        PurchaseOrder,
+        expect.any(Object),
+      );
+
+      // Verifikasi create dipanggil dengan data yang benar (poNumber dari generator)
+      expect(mockManager.create).toHaveBeenCalledWith(
+        PurchaseOrder,
         expect.objectContaining({
-          poNumber: 'PO-001',
-          supplierId: '11111111-1111-4111-8111-111111111111',
+          poNumber: expect.stringMatching(/^PO\/\d{4}\/\d{2}\/0001$/), // Cek format PO/YYYY/MM/0001
+          supplierId: input.supplierId,
           status: 'DRAFT',
         }),
       );
-      expect(purchaseOrderRepository.save).toHaveBeenCalled();
-      expect(result).toEqual({ id: 'po-1' });
+
+      expect(mockManager.save).toHaveBeenCalled();
+      expect(result.id).toBe('po-uuid-123');
     });
 
     describe('Negative Scenarios', () => {
-      it('should throw when creating with duplicate active PO number', async () => {
-        purchaseOrderRepository.findOne.mockResolvedValue({
-          id: 'po-1',
-          poNumber: 'PO-001',
-          deletedAt: null,
-        } as PurchaseOrder);
+      it('should rollback and throw error if database save fails', async () => {
+        // Mock generator berhasil tapi save gagal
+        mockManager.findOne.mockResolvedValue(null);
+        mockManager.create.mockReturnValue({});
+        mockManager.save.mockRejectedValue(
+          new Error('Database Connection Lost'),
+        );
 
         await expect(
           service.create({
-            poNumber: 'PO-001',
-            supplierId: '11111111-1111-4111-8111-111111111111',
-            status: 'DRAFT',
+            supplierId: 'any-uuid',
           }),
-        ).rejects.toThrow(ConflictException);
+        ).rejects.toThrow('Database Connection Lost');
+      });
+
+      // Skenario "Duplicate" sekarang diuji pada level generator jika terjadi Race Condition
+      it('should increment sequence if existing PO exists for the same month', async () => {
+        // Mock: Ditemukan PO terakhir dengan sequence 0005
+        mockManager.findOne.mockResolvedValue({ poNumber: 'PO/2026/03/0005' });
+        mockManager.create.mockImplementation((entity, data) => data);
+        mockManager.save.mockImplementation((data) => data);
+
+        const result = await service.create({ supplierId: 'uuid' });
+
+        // Harus jadi 0006
+        expect(result.poNumber).toBe('PO/2026/03/0006');
       });
     });
   });

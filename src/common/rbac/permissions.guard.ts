@@ -67,7 +67,6 @@ export class PermissionsGuard implements CanActivate {
 
     const isDebugEnabled = process.env.RBAC_DEBUG === 'true';
     if (isDebugEnabled) {
-      console.log("DEBUG")
       this.logger.debug(
         JSON.stringify({
           userId,

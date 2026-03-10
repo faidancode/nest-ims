@@ -1,4 +1,4 @@
-import { Supplier } from 'src/suppliers/supplier.entity';
+import { Supplier } from '../suppliers/supplier.entity';
 import {
   Column,
   CreateDateColumn,
@@ -6,9 +6,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { PurchaseOrderItem } from './purchase-order-item.entity';
 
 export type PurchaseOrderStatus = 'DRAFT' | 'RECEIVED';
 
@@ -26,7 +28,7 @@ export class PurchaseOrder {
   @Column({ type: 'varchar', length: 20, default: 'DRAFT' })
   status: PurchaseOrderStatus;
 
-  @Column({ name: 'order_date', type: 'timestamp' })
+  @Column({ name: 'order_date', type: 'timestamp', default: () => 'NOW()' })
   orderDate: Date;
 
   @Column({ name: 'expected_date', type: 'timestamp', nullable: true })
@@ -59,4 +61,9 @@ export class PurchaseOrder {
   @ManyToOne(() => Supplier, (supplier) => supplier.purchaseOrders)
   @JoinColumn({ name: 'supplier_id' }) // Mapping ke kolom DB
   supplier: Supplier;
+
+  @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, {
+    cascade: true, // Opsional: Memungkinkan simpan PO sekaligus simpan items-nya
+  })
+  items: PurchaseOrderItem[];
 }

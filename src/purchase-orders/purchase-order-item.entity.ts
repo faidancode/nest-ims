@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { PurchaseOrder } from './purchase-order.entity';
-import { Part } from 'src/parts/part.entity';
+import { Part } from '../parts/part.entity';
 
 @Entity('purchase_order_items')
 export class PurchaseOrderItem {
